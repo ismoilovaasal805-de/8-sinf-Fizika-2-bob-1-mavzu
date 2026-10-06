@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Elektr toki darsi</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: sticky tab bar over three lesson panels; each panel = text, simulation (canvas left, controls right), quiz, summary */
+:root{--bg:#f2f6fb;--surface:#fff;--ink:#12263f;--muted:#56667d;--line:#d5dfeb;--accent:#0f8f83;--accent-ink:#fff;--soft:#dff4f1;--elec:#2563eb;--pos:#e5484d;--amber:#f5a300;--ok:#1a9455;--bad:#d6336c;--cv:#f8fbff;--wire:#33475f;
+--fd:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--fb:"Nunito","Segoe UI",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1626;--surface:#16223a;--ink:#e8eef8;--muted:#9fb0c8;--line:#2a3b58;--accent:#2fd1c0;--accent-ink:#06211e;--soft:#12383a;--elec:#5aa2ff;--pos:#ff6b6b;--amber:#ffc447;--ok:#4cd68a;--bad:#ff7aa8;--cv:#0f1b30;--wire:#9db0cc;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1626;--surface:#16223a;--ink:#e8eef8;--muted:#9fb0c8;--line:#2a3b58;--accent:#2fd1c0;--accent-ink:#06211e;--soft:#12383a;--elec:#5aa2ff;--pos:#ff6b6b;--amber:#ffc447;--ok:#4cd68a;--bad:#ff7aa8;--cv:#0f1b30;--wire:#9db0cc;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:17px/1.55 var(--fb);padding-inline:16px;padding-block:0 40px}
+*{box-sizing:border-box}
+.wrap{max-width:1040px;margin-inline:auto}
+header{padding-block:22px 6px}
+header small{font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-size:13px}
+h1{font:800 clamp(28px,6vw,44px)/1.1 var(--fd);margin:4px 0 0;text-wrap:balance}
+h2{font:800 clamp(22px,4.5vw,30px)/1.2 var(--fd);margin:8px 0 6px;text-wrap:balance}
+h3{font:700 19px/1.3 var(--fd);margin:0 0 8px}
+p{margin:0 0 10px}.lead{font-size:18px;color:var(--muted);max-width:68ch}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:8px;padding-block:10px;border-bottom:1px solid var(--line)}
+.tab{flex:1 1 0;min-width:0;min-height:48px;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;font:700 15px/1.2 var(--fb);cursor:pointer;padding:6px 8px}
+.tab b{display:block;font:800 18px var(--fd);color:var(--accent)}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab[aria-selected="true"] b{color:var(--accent-ink)}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.panel{padding-block:20px;display:flex;flex-direction:column;gap:26px}.panel[hidden]{display:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.sim{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:820px){.sim{grid-template-columns:minmax(0,1fr)}}
+canvas{display:block;width:100%;max-width:680px;margin-inline:auto;background:var(--cv);border-radius:10px;border:1px solid var(--line)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin-block:10px}
+.btn{min-height:44px;padding:0 14px;border-radius:10px;border:2px solid var(--accent);background:var(--surface);color:var(--ink);font:700 15px var(--fb);cursor:pointer}
+.btn.p{background:var(--accent);color:var(--accent-ink)}.btn.s{min-height:38px;padding:0 10px;font-size:14px}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sw{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;font-weight:700}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .trk{flex:none;width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:background .2s}
+.sw .trk:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px #0005;transition:left .2s}
+.sw input:checked+.trk{background:var(--accent)}.sw input:checked+.trk:after{left:23px}
+.sw input:focus-visible+.trk{outline:3px solid var(--amber);outline-offset:2px}
+.msg{padding:10px 12px;border-radius:10px;background:var(--soft);font-weight:700;margin-block:8px 0;min-height:3.2em}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-block:8px}
+.chip{padding:4px 10px;border-radius:99px;border:2px solid var(--line);font-size:14px;font-weight:800;color:var(--muted)}
+.chip.on{border-color:var(--ok);color:var(--ok)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px}
+.qty .sym{font:800 44px/1 var(--fd);color:var(--accent)}.qty .u{font-weight:800}.qty p{font-size:15px;color:var(--muted);margin:6px 0 0}
+.read{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-block:10px}
+.read div{border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center;min-width:0}
+.read span{display:block;font-size:13px;color:var(--muted)}.read b{font:800 24px var(--fd);font-variant-numeric:tabular-nums}
+.sl{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;min-height:44px;font-weight:800}
+input[type=range]{width:100%;accent-color:var(--accent);height:32px}
+.sl output{min-width:5.5ch;text-align:right;font-variant-numeric:tabular-nums}
+.tri{font:800 34px/1.3 var(--fd);text-align:center;border:2px solid var(--accent);border-radius:14px;padding:12px}
+.tri div{border-top:3px solid var(--ink);margin-top:2px;padding-top:2px}
+.forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.forms div{text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px}.forms b{display:block;font:800 26px var(--fd)}.forms span{font-size:14px;color:var(--muted)}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-block:8px;background:var(--surface)}summary{font-weight:800;cursor:pointer;min-height:32px}
+.sol{margin-top:6px;color:var(--ok);font-weight:700}
+.tag{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.quiz h3{margin-bottom:4px}.score{color:var(--muted);font-weight:700;margin-bottom:8px}
+.q{padding-block:12px;border-top:1px solid var(--line)}.q p{font-weight:800}
+.opt{display:block;width:100%;text-align:left;min-height:46px;margin-block:6px;padding:8px 12px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:600 16px var(--fb);cursor:pointer}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--surface))}.opt.no{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--surface))}
+.why{font-size:15px;color:var(--muted);margin:4px 0 0}
+.rem{background:var(--soft);border-radius:14px;padding:16px}.rem ul{margin:6px 0 0;padding-left:20px}.rem li{margin-block:4px}
+.safe{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.safe li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
+.safe li:before{content:counter(s);width:30px;height:30px;border-radius:8px;background:var(--pos);color:#fff;font:800 16px/30px var(--fd);text-align:center}
+.app p{font-size:15px;color:var(--muted);margin:0}
+.teach{border:2px dashed var(--line);border-radius:14px;padding:16px}
+.teach table{width:100%;border-collapse:collapse}.teach td{padding:6px 8px;border-top:1px solid var(--line)}.teach td:last-child{text-align:right;font-weight:800;white-space:nowrap}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header><small>8-sinf · Fizika</small><h1>Elektr toki haqida tushuncha</h1></header>
+<nav class="tabs" role="tablist" aria-label="Boʻlimlar">
+<button class="tab" role="tab" data-t="1" aria-selected="true"><b>1</b>Tokning tabiati</button>
+<button class="tab" role="tab" data-t="2" aria-selected="false"><b>2</b>Om qonuni</button>
+<button class="tab" role="tab" data-t="3" aria-selected="false"><b>3</b>Turlari va taʼsirlari</button>
+</nav>
+
+<!-- ============ 1 ============ -->
+<section class="panel" id="p1" role="tabpanel">
+<div><h2>Elektr tokining tabiati va hosil boʻlish shartlari</h2>
+<p class="lead">Elektr toki — zaryadli zarralarning tartibli (yoʻnalgan) harakati. Metallarda bu zarralar erkin elektronlardir.</p></div>
+
+<div class="card sim"><div><canvas id="e1"></canvas></div>
+<div><h3>Oʻtkazgich ichida nima boʻlyapti?</h3>
+<p>Metall ichida erkin elektronlar (koʻk nuqtalar) har tomonga tartibsiz yuguradi. Manba ulansa, ular bir tomonga siljiy boshlaydi.</p>
+<label class="sw"><input type="checkbox" id="e1src"><span class="trk"></span>Manbani ulash</label>
+<div class="ctl" data-anim="e1"></div><div class="msg" id="e1msg"></div></div></div>
+
+<div class="card sim"><div><canvas id="c1"></canvas>
+<div class="legend"><span><i style="background:var(--elec)"></i>elektron (− dan + ga)</span><span><i style="background:var(--pos)"></i>shartli yoʻnalish (+ dan − ga)</span></div></div>
+<div><h3>Tok qachon paydo boʻladi?</h3>
+<p>Uch shartni birma-bir yoqib-oʻchirib koʻring.</p>
+<label class="sw"><input type="checkbox" id="k1" checked><span class="trk"></span>1. Erkin zaryadli zarralar bor (sim — metall)</label>
+<label class="sw"><input type="checkbox" id="k2" checked><span class="trk"></span>2. Elektr maydon bor (batareya ulangan)</label>
+<label class="sw"><input type="checkbox" id="k3" checked><span class="trk"></span>3. Zanjir berk (kalit ulangan)</label>
+<div class="chips"><span class="chip" id="h1">Zarralar</span><span class="chip" id="h2">Maydon</span><span class="chip" id="h3">Berk zanjir</span></div>
+<div class="msg" id="c1msg"></div>
+<label class="sw"><input type="checkbox" id="showE" checked><span class="trk"></span>Elektronlar yoʻnalishi</label>
+<label class="sw"><input type="checkbox" id="showC" checked><span class="trk"></span>Shartli yoʻnalish</label>
+<div class="ctl" data-anim="c1"></div></div></div>
+
+<div class="card"><h3>Tok yoʻnalishi</h3>
+<p><b>Shartli yoʻnalish:</b> manbaning musbat (+) qutbidan manfiy (−) qutbi tomon. Buni fiziklar qadimdan kelishib olgan.</p>
+<p style="margin:0"><b>Haqiqiy harakat:</b> metallda elektronlar manfiy (−) qutbdan musbat (+) qutb tomon siljiydi, ya’ni shartli yoʻnalishga teskari.</p></div>
+
+<div class="card quiz" data-quiz="0"></div>
+<div class="rem"><span class="tag">Esda saqla</span><ul>
+<li>Elektr toki — zaryadli zarralarning yoʻnalgan harakati.</li>
+<li>Tok uchun kerak: erkin zaryadli zarralar, elektr maydon (manba), berk zanjir.</li>
+<li>Shartli tok yoʻnalishi: + dan −ga. Elektronlar: − dan +ga.</li></ul></div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="panel" id="p2" role="tabpanel" hidden>
+<div><h2>Tokni xarakterlovchi kattaliklar va Om qonuni</h2>
+<p class="lead">Tok kuchi, kuchlanish va qarshilik oʻzaro bogʻliq. Bu bogʻlanishni Om qonuni aytib beradi.</p></div>
+
+<div class="grid3">
+<div class="card qty"><div class="sym">I</div><h3>Tok kuchi</h3><div class="u">Birligi: amper (A)</div><p>Oʻlchaydi: <b>ampermetr</b>. Zanjirga <b>ketma-ket</b> ulanadi. 1 A = 1 kulon / 1 soniya (I = q / t).</p></div>
+<div class="card qty"><div class="sym">U</div><h3>Kuchlanish</h3><div class="u">Birligi: volt (V)</div><p>Oʻlchaydi: <b>voltmetr</b>. Iste’molchiga <b>parallel</b> ulanadi. Tokni “itaruvchi” kuch kabi tasavvur qiling.</p></div>
+<div class="card qty"><div class="sym">R</div><h3>Qarshilik</h3><div class="u">Birligi: om (Ω)</div><p>Oʻtkazgich tokka qancha toʻsqinlik qiladi. Qarshilik katta boʻlsa, tok kichik boʻladi.</p></div></div>
+
+<div class="card sim"><div><canvas id="c2"></canvas></div>
+<div><h3>Om qonuni simulyatsiyasi</h3>
+<div class="sl"><span>U</span><input type="range" id="sU" min="1" max="12" step="1" value="6" aria-label="Kuchlanish"><output id="oU"></output></div>
+<div class="sl"><span>R</span><input type="range" id="sR" min="1" max="20" step="1" value="3" aria-label="Qarshilik"><output id="oR"></output></div>
+<div class="read"><div><span>Tok kuchi I</span><b id="rI"></b></div><div><span>Ampermetr</span><b id="rA"></b></div><div><span>Voltmetr</span><b id="rV"></b></div></div>
+<p style="font-size:15px;color:var(--muted)">Elektronlar tezligi tok kuchiga mos oʻzgaradi (tasviriy).</p>
+<div class="ctl" data-anim="c2"></div></div></div>
+
+<div class="card"><h3>Grafiklar jonli chiziladi</h3>
+<div class="fx"><div><canvas id="g1"></canvas><p style="font-size:14px;color:var(--muted)">I(U): R doimiy — toʻgʻri chiziq</p></div>
+<div><canvas id="g2"></canvas><p style="font-size:14px;color:var(--muted)">I(R): U doimiy — R oshsa, I kamayadi</p></div></div>
+<div class="ctl" data-anim="g1 g2"></div></div>
+
+<div class="card"><h3>Om qonuni — uch koʻrinish</h3>
+<div class="sim"><div class="tri">U<div>I · R</div></div>
+<div class="forms"><div><b>I = U / R</b><span>tok kuchi</span></div><div><b>U = I · R</b><span>kuchlanish</span></div><div><b>R = U / I</b><span>qarshilik</span></div></div></div>
+<p style="margin-top:10px;font-size:15px;color:var(--muted)">Topmoqchi boʻlgan kattalikni yopib qoʻying: qolgani formulani koʻrsatadi.</p></div>
+
+<div class="card"><h3>Masala namunalari</h3>
+<details><summary>1. U = 12 V, R = 4 Ω. I = ?</summary><p>I = U / R = 12 / 4</p><p class="sol">I = 3 A</p></details>
+<details><summary>2. I = 0,5 A, R = 20 Ω. U = ?</summary><p>U = I · R = 0,5 · 20</p><p class="sol">U = 10 V</p></details>
+<details><summary>3. Lampochkada U = 6 V, I = 0,5 A. R = ?</summary><p>R = U / I = 6 / 0,5</p><p class="sol">R = 12 Ω</p></details></div>
+
+<div class="card quiz" data-quiz="1"></div>
+<div class="rem"><span class="tag">Esda saqla</span><ul>
+<li>I — amper (A), ampermetr ketma-ket. U — volt (V), voltmetr parallel. R — om (Ω).</li>
+<li>Om qonuni: I = U / R.</li>
+<li>U oshsa, I ham oshadi. R oshsa, I kamayadi.</li></ul></div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="panel" id="p3" role="tabpanel" hidden>
+<div><h2>Tok turlari, taʼsirlari va qoʻllanilishi</h2>
+<p class="lead">Tokni koʻz bilan koʻrib boʻlmaydi, lekin uning taʼsirlarini koʻrish mumkin.</p></div>
+
+<div class="card sim"><div><canvas id="ac"></canvas></div>
+<div><h3>Oʻzgarmas va oʻzgaruvchan tok</h3>
+<div class="seg"><button class="btn s" id="mDC" aria-pressed="false">Oʻzgarmas (DC)</button><button class="btn s" id="mAC" aria-pressed="true">Oʻzgaruvchan (AC)</button></div>
+<div class="sl"><span>Chastota</span><input type="range" id="sF" min="0.5" max="4" step="0.5" value="1.5" aria-label="Chastota"><output id="oF"></output></div>
+<div class="ctl" data-anim="ac"></div>
+<p><b>Batareya</b> — oʻzgarmas tok: yoʻnalish va kattalik deyarli oʻzgarmaydi.</p>
+<p style="margin:0"><b>Rozetka</b> — oʻzgaruvchan tok: Oʻzbekistonda 220 V, 50 Hz. Tok sekundiga 50 marta toʻliq tebranadi. Animatsiyada chastota sekinlashtirilgan.</p></div></div>
+
+<div><h3>Tokning taʼsirlari</h3><div class="fx" id="fxgrid"></div></div>
+
+<div><h3>Kundalik hayotda</h3><div class="grid3">
+<div class="card app"><span class="tag">Issiqlik</span><h3>Uy-roʻzgʻor</h3><p>Dazmol, choynak, elektr plita, issiqlik radiatori.</p></div>
+<div class="card app"><span class="tag">Yorugʻlik</span><h3>Yoritish</h3><p>Choʻgʻlanma lampa, LED lampa, ekran va svetoforlar.</p></div>
+<div class="card app"><span class="tag">Mexanik</span><h3>Transport</h3><p>Tramvay, metro, elektr poyezd, elektromobil.</p></div>
+<div class="card app"><span class="tag">Magnit</span><h3>Texnika</h3><p>Elektr qoʻngʻiroq, dinamik, yuk koʻtaruvchi elektromagnit.</p></div>
+<div class="card app"><span class="tag">Kimyoviy</span><h3>Sanoat</h3><p>Metallni mis, nikel yoki xrom bilan qoplash, metall ajratib olish.</p></div>
+<div class="card app"><span class="tag">Aloqa</span><h3>Telefon va kompyuter</h3><p>Zaryadlanadigan batareyalar, kichik zanjirlar va datchiklar.</p></div></div></div>
+
+<div class="card"><h3>Xavfsizlik qoidalari</h3><ol class="safe">
+<li>Ho‘l qo‘l bilan rozetka va elektr asboblarga tegmang.</li>
+<li>Sim, vilka yoki rozetka shikastlangan boʻlsa, ishlatmang. Kattalarga ayting.</li>
+<li>Rozetkaga igna, mix va boshqa metall buyum tiqmang.</li>
+<li>Bitta rozetkaga koʻp asbob ulamang: sim qizib, yongʻin chiqishi mumkin.</li>
+<li>Vilkani simidan tortmang, vilkaning oʻzidan ushlab torting.</li>
+<li>Yerga tushgan yoki uzilgan simga yaqinlashmang. Darhol kattalarga xabar bering.</li>
+<li>Tajribalarni faqat batareya bilan qiling. 220 V bilan tajriba qilish xavfli.</li></ol></div>
+
+<div class="card quiz" data-quiz="2"></div>
+<div class="rem"><span class="tag">Esda saqla</span><ul>
+<li>Oʻzgarmas tok (batareya) bir yoʻnalishda, oʻzgaruvchan tok (rozetka) yoʻnalishini davriy almashtiradi.</li>
+<li>Tokning taʼsirlari: issiqlik, magnit, kimyoviy, yorugʻlik, mexanik.</li>
+<li>Elektr bilan ehtiyot boʻling: ho‘l qo‘l, shikastlangan sim va rozetka xavfli.</li></ul></div>
+
+<div class="teach"><h3>Oʻqituvchi uchun tavsiya</h3><table>
+<tr><td>1-boʻlim: animatsiya, shartlar, test</td><td>≈ 15 daqiqa</td></tr>
+<tr><td>2-boʻlim: Om qonuni, grafiklar, masalalar</td><td>≈ 20 daqiqa</td></tr>
+<tr><td>3-boʻlim: tok turlari, taʼsirlar, xavfsizlik</td><td>≈ 25 daqiqa</td></tr></table>
+<p style="margin:8px 0 0;font-size:15px;color:var(--muted)">Jami taxminan 60 daqiqa (bir yarim dars). 45 daqiqalik darsda 3-boʻlimdan 2–3 ta taʼsirni tanlang.</p></div>
+</section>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const C={};
+function colors(){const s=getComputedStyle(document.documentElement);['ink','muted','line','accent','elec','pos','amber','ok','cv','wire','surface','bad'].forEach(k=>C[k]=s.getPropertyValue('--'+k).trim());}
+colors();setInterval(colors,600);
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const anims={};
+class A{
+constructor(id,W,H,o){this.id=id;this.c=$(id);this.W=W;this.H=H;this.x=this.c.getContext('2d');this.c.style.aspectRatio=W+'/'+H;this.running=!reduce;this.t=0;this.cw=0;Object.assign(this,o);anims[id]=this;if(this.init)this.init();}
+frame(dt){const w=this.c.clientWidth,d=devicePixelRatio||1;if(w!==this.cw){this.cw=w;this.c.width=Math.round(w*d);this.c.height=Math.round(w*this.H/this.W*d);}
+if(this.running){this.t+=dt;if(this.update)this.update(dt);}
+const s=this.c.width/this.W;this.x.setTransform(s,0,0,s,0,0);this.x.clearRect(0,0,this.W,this.H);this.draw(this.x);}
+reset(){this.t=0;if(this.init)this.init();}}
+let last=performance.now();
+(function loop(n){const dt=Math.min(.05,(n-last)/1000);last=n;for(const k in anims){const a=anims[k];if(a.c.offsetParent)a.frame(dt);}requestAnimationFrame(loop);})(last);
+
+function txt(x,s,px,py,size,col,al,w){x.font=(w||700)+' '+size+'px Nunito,system-ui,sans-serif';x.fillStyle=col;x.textAlign=al||'center';x.textBaseline='middle';x.fillText(s,px,py);}
+function line(x,pts,col,w,dash){x.beginPath();pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.strokeStyle=col;x.lineWidth=w||3;x.lineJoin='round';x.setLineDash(dash||[]);x.stroke();x.setLineDash([]);}
+function dot(x,px,py,r,col){x.beginPath();x.arc(px,py,r,0,7);x.fillStyle=col;x.fill();}
+function arrow(x,px,py,ang,sz,col){x.save();x.translate(px,py);x.rotate(ang);x.beginPath();x.moveTo(sz,0);x.lineTo(-sz*.7,-sz*.7);x.lineTo(-sz*.7,sz*.7);x.closePath();x.fillStyle=col;x.fill();x.restore();}
+function bigArrow(x,x1,y1,x2,y2,col,w){line(x,[[x1,y1],[x2,y2]],col,w||3);arrow(x,x2,y2,Math.atan2(y2-y1,x2-x1),8,col);}
+const fmt=(v,d)=>v.toFixed(d).replace('.',',');
+function loopPos(s,x0,y0,x1,y1){const w=x1-x0,h=y1-y0,L=2*(w+h);s=((s%L)+L)%L;if(s<w)return[x0+s,y0,0];s-=w;if(s<h)return[x1,y0+s,Math.PI/2];s-=h;if(s<w)return[x1-s,y1,Math.PI];s-=w;return[x0,y1-s,-Math.PI/2];}
+function clear(x,px,py,w,h){x.fillStyle=C.cv;x.fillRect(px,py,w,h);}
+function battery(x,px,py,col,lab){clear(x,px-18,py-24,36,48);const p=x.globalAlpha;
+line(x,[[px-16,py-8],[px+16,py-8]],C.pos,5);line(x,[[px-9,py+8],[px+9,py+8]],C.elec,5);
+line(x,[[px,py-24],[px,py-8]],C.wire,3);line(x,[[px,py+8],[px,py+24]],C.wire,3);
+txt(x,'+',px-28,py-8,18,C.pos,'center',800);txt(x,'−',px-28,py+8,20,C.elec,'center',800);}
+
+/* ---- 1. erkin elektronlar ---- */
+new A('e1',420,240,{src:false,
+init(){this.e=[];for(let i=0;i<26;i++)this.e.push({x:45+Math.random()*330,y:68+Math.random()*104,vx:0,vy:0,tm:Math.random()*.4});this.say();},
+say(){$('e1msg').textContent=this.src?'Elektronlar bir tomonga siljiyapti: bu elektr toki.':'Elektronlar tartibsiz harakatlanyapti. Tok yoʻq.';},
+update(dt){const dr=this.src?55:0;for(const e of this.e){e.tm-=dt;if(e.tm<0){const a=Math.random()*6.28,s=35+Math.random()*35;e.vx=Math.cos(a)*s;e.vy=Math.sin(a)*s;e.tm=.2+Math.random()*.4;}
+e.x+=(e.vx+dr)*dt;e.y+=e.vy*dt;if(e.x>378)e.x-=336;if(e.x<42)e.x+=336;if(e.y<66||e.y>174){e.vy=-e.vy;e.y=Math.min(174,Math.max(66,e.y));}}},
+draw(x){x.fillStyle=C.surface;x.strokeStyle=C.wire;x.lineWidth=3;x.beginPath();x.roundRect(40,58,340,120,12);x.fill();x.stroke();
+for(let i=0;i<9;i++)for(let j=0;j<3;j++){const px=62+i*37,py=80+j*38;dot(x,px,py,10,C.pos+'30');txt(x,'+',px,py,15,C.pos,'center',800);}
+for(const e of this.e){dot(x,e.x,e.y,5.5,C.elec);}
+txt(x,'−',16,118,30,C.elec,'center',800);txt(x,'+',404,118,30,C.pos,'center',800);
+txt(x,'oʻtkazgich (metall): + ionlar va erkin elektronlar',210,24,14,C.muted);
+if(this.src){bigArrow(x,360,205,60,205,C.pos,3);txt(x,'shartli tok: + dan −ga',210,224,14,C.pos);
+}}});
+$('e1src').onchange=e=>{anims.e1.src=e.target.checked;anims.e1.say();};
+
+/* ---- 2. oddiy zanjir ---- */
+new A('c1',420,300,{ph:0,
+init(){this.ph=0;},
+st(){const a=$('k1').checked,b=$('k2').checked,c=$('k3').checked;return{a,b,c,flow:a&&b&&c};},
+update(dt){if(this.st().flow)this.ph+=90*dt;},
+draw(x){const s=this.st(),X0=60,Y0=70,X1=360,Y1=240,L=940;
+['h1','h2','h3'].forEach((id,i)=>$(id).classList.toggle('on',[s.a,s.b,s.c][i]));
+const miss=[];if(!s.a)miss.push('erkin zaryadli zarralar');if(!s.b)miss.push('elektr maydon (manba)');if(!s.c)miss.push('berk zanjir');
+$('c1msg').textContent=s.flow?'Uchala shart bajarildi: erkin elektronlar yoʻnalgan harakatlanadi, zanjirda tok bor, lampochka yonadi.':'Tok yoʻq, lampochka oʻchiq. Yetishmaydi: '+miss.join(', ')+'.';
+const wc=s.a?C.wire:C.muted;
+x.strokeStyle=wc;x.lineWidth=4;x.setLineDash(s.a?[]:[8,6]);x.strokeRect(X0,Y0,X1-X0,Y1-Y0);x.setLineDash([]);
+const N=34;
+if($('showE').checked)for(let i=0;i<N;i++){let p=loopPos(i*L/N-this.ph,X0,Y0,X1,Y1);let jx=0,jy=0;if(!s.flow&&s.a){jx=Math.sin(this.t*9+i*2)*2.5;jy=Math.cos(this.t*7+i*3)*2.5;}
+dot(x,p[0]+jx,p[1]+jy,s.a?5:3.5,s.a?C.elec:C.muted);}
+if($('showC').checked&&s.flow)for(let i=0;i<8;i++){const p=loopPos(i*L/8+this.ph,X0,Y0,X1,Y1);arrow(x,p[0],p[1],p[2],8,C.pos);}
+/* batareya */
+x.save();if(!s.b)x.globalAlpha=.4;battery(x,X0,155);x.restore();
+if(!s.b)txt(x,'manba yoʻq',X0+6,200,14,C.muted,'center');else txt(x,'batareya',X0+8,200,14,C.muted,'center');
+/* kalit */
+clear(x,178,Y0-8,64,16);dot(x,180,Y0,5,C.wire);dot(x,240,Y0,5,C.wire);
+line(x,s.c?[[180,Y0],[240,Y0]]:[[180,Y0],[232,Y0-26]],C.wire,5);txt(x,'kalit',210,Y0-34,14,C.muted);
+/* lampochka */
+clear(x,X1-8,133,16,44);const gl=s.flow;
+if(gl){const g=x.createRadialGradient(X1,155,5,X1,155,60);g.addColorStop(0,C.amber+'cc');g.addColorStop(1,C.amber+'00');x.fillStyle=g;x.fillRect(X1-62,93,124,124);}
+dot(x,X1,155,22,gl?C.amber:C.surface);x.beginPath();x.arc(X1,155,22,0,7);x.strokeStyle=C.wire;x.lineWidth=3;x.stroke();
+line(x,[[X1-10,166],[X1-5,146],[X1,166],[X1+5,146],[X1+10,166]],gl?'#fff':C.muted,2.5);
+txt(x,'lampochka',X1,195,14,C.muted);
+txt(x,s.a?'sim: metall':'sim: rezina (izolyator)',210,Y1+30,14,C.muted);
+}});
+
+/* ---- 3. Om qonuni ---- */
+const S={U:6,R:3};
+const sU=$('sU'),sR=$('sR');
+function readS(){S.U=+sU.value;S.R=+sR.value;const I=S.U/S.R;$('oU').textContent=S.U+' V';$('oR').textContent=S.R+' Ω';
+$('rI').textContent=fmt(I,2)+' A';$('rA').textContent=fmt(I,2)+' A';$('rV').textContent=fmt(S.U,1)+' V';return I;}
+sU.oninput=sR.oninput=readS;readS();
+new A('c2',420,330,{ph:0,init(){this.ph=0;},
+update(dt){const I=S.U/S.R;this.ph+=Math.min(240,45*I)*dt;},
+draw(x){const I=S.U/S.R,X0=50,Y0=105,X1=370,Y1=275,L=980;
+line(x,[[X0,Y0],[X1,Y0],[X1,Y1],[X0,Y1],[X0,Y0]],C.wire,4);
+const N=28;for(let i=0;i<N;i++){const p=loopPos(i*L/N-this.ph,X0,Y0,X1,Y1);dot(x,p[0],p[1],5,C.elec);}
+battery(x,X0,190);txt(x,fmt(S.U,0)+' V',X0+8,232,16,C.ink,'center');
+/* qarshilik */
+clear(x,165,Y0-14,90,28);x.fillStyle=C.surface;x.strokeStyle=C.wire;x.lineWidth=3;x.fillRect(170,Y0-12,80,24);x.strokeRect(170,Y0-12,80,24);txt(x,'R = '+S.R+' Ω',210,Y0,15,C.ink);
+/* voltmetr (parallel) */
+line(x,[[170,Y0],[170,42],[192,42]],C.wire,3);line(x,[[250,Y0],[250,42],[228,42]],C.wire,3);
+dot(x,210,42,18,C.surface);x.beginPath();x.arc(210,42,18,0,7);x.strokeStyle=C.pos;x.lineWidth=3;x.stroke();txt(x,'V',210,42,18,C.pos,'center',800);
+txt(x,fmt(S.U,1)+' V',262,22,15,C.pos,'left');
+/* ampermetr (ketma-ket) */
+clear(x,185,Y1-20,50,40);dot(x,210,Y1,18,C.surface);x.beginPath();x.arc(210,Y1,18,0,7);x.strokeStyle=C.accent;x.lineWidth=3;x.stroke();txt(x,'A',210,Y1,18,C.accent,'center',800);
+txt(x,fmt(I,2)+' A',210,Y1+36,16,C.accent,'center');
+txt(x,'ketma-ket',140,Y1-14,13,C.muted);txt(x,'parallel',290,60,13,C.muted,'left');
+}});
+
+/* ---- grafiklar ---- */
+function niceStep(r){for(const s of[.1,.2,.5,1,2,5,10,20,50])if(r/s<=5)return s;return 100;}
+function graph(id,cfg){new A(id,420,300,{update(dt){},
+draw(x){const l=52,r=18,t=22,b=48,w=420-l-r,h=300-t-b,k=cfg.k();const ym0=cfg.ymax();const st=niceStep(ym0),ym=Math.ceil(ym0/st)*st;
+const px=v=>l+(v-cfg.x0)/(cfg.x1-cfg.x0)*w,py=v=>t+h-v/ym*h;
+x.lineWidth=1;for(let v=0;v<=ym+1e-9;v+=st){line(x,[[l,py(v)],[l+w,py(v)]],C.line,1);txt(x,fmt(v,st<1?1:0),l-6,py(v),13,C.muted,'right');}
+cfg.ticks.forEach(v=>{line(x,[[px(v),t],[px(v),t+h]],C.line,1);txt(x,''+v,px(v),t+h+14,13,C.muted);});
+line(x,[[l,t],[l,t+h],[l+w,t+h]],C.ink,2);txt(x,cfg.xl,l+w,t+h+34,14,C.ink,'right');txt(x,'I, A',l+4,10,14,C.ink,'left');
+const p=Math.min(1,this.t/2.5);const pts=[];for(let i=0;i<=60;i++){const v=cfg.x0+(cfg.x1-cfg.x0)*p*i/60;pts.push([px(v),py(cfg.f(v))]);}
+line(x,pts,C.elec,4);
+const cur=cfg.cur();if(p>=(cur-cfg.x0)/(cfg.x1-cfg.x0)-1e-6){const I=cfg.f(cur);line(x,[[px(cur),py(I)],[px(cur),t+h]],C.pos,1.5,[4,4]);line(x,[[px(cur),py(I)],[l,py(I)]],C.pos,1.5,[4,4]);dot(x,px(cur),py(I),7,C.pos);
+txt(x,fmt(I,2)+' A',px(cur)+(cur>(cfg.x0+cfg.x1)/2?-10:10),py(I)-14,14,C.pos,cur>(cfg.x0+cfg.x1)/2?'right':'left');}
+}});}
+graph('g1',{x0:0,x1:12,ticks:[0,2,4,6,8,10,12],xl:'U, V (R = const)',f:v=>v/S.R,cur:()=>S.U,ymax:()=>12/S.R,k(){}});
+graph('g2',{x0:1,x1:20,ticks:[1,5,10,15,20],xl:'R, Ω (U = const)',f:v=>S.U/v,cur:()=>S.R,ymax:()=>S.U,k(){}});
+
+/* ---- boʻlimlar ---- */
+const tabs=document.querySelectorAll('.tab');
+function show(n){tabs.forEach(b=>b.setAttribute('aria-selected',b.dataset.t==n));[1,2,3].forEach(i=>$('p'+i).hidden=i!=n);}
+tabs.forEach(b=>b.onclick=()=>{show(b.dataset.t);document.querySelector('.tabs').scrollIntoView();try{history.replaceState(null,'','#bolim'+b.dataset.t);}catch(e){}});
+const hm=location.hash.match(/bolim([123])/);if(hm)show(hm[1]);
+
+/* ---- testlar ---- */
+function quiz(el,data){
+function build(){let right=0,done=0;el.innerHTML='<h3>Bilimingizni tekshiring</h3><div class="score"></div>';const sc=el.querySelector('.score');
+const upd=()=>{sc.textContent='Toʻgʻri javoblar: '+right+' / '+data.length;};upd();
+data.forEach((d,qi)=>{const q=document.createElement('div');q.className='q';q.innerHTML='<p>'+(qi+1)+'. '+d.q+'</p>';
+const why=document.createElement('p');why.className='why';why.hidden=true;
+d.o.forEach((t,oi)=>{const b=document.createElement('button');b.className='opt';b.textContent=t;
+b.onclick=()=>{if(q.dataset.done)return;q.dataset.done=1;done++;
+if(oi===d.a){b.classList.add('ok');right++;}else{b.classList.add('no');q.children[1+d.a].classList.add('ok');}
+why.hidden=false;why.textContent=(oi===d.a?'Toʻgʻri! ':'Notoʻgʻri. ')+d.w;upd();
+if(done===data.length){const r=document.createElement('button');r.className='btn s';r.textContent='Qayta urinish';r.onclick=build;el.appendChild(r);}};
+q.appendChild(b);});q.appendChild(why);el.appendChild(q);});}
+build();}
+
+/* ---- AC / DC ---- */
+const AC={mode:'ac',f:1.5};
+new A('ac',420,250,{
+draw(x){const l=52,w=350,y0=150,amp=62,T=this.t,f=AC.f,ac=AC.mode==='ac';
+const v=tt=>ac?Math.sin(6.2832*f*tt):0.8;
+line(x,[[l,y0-amp-8],[l,y0+amp+8]],C.ink,2);line(x,[[l,y0],[l+w,y0]],C.ink,2);
+txt(x,'+',l-14,y0-amp,18,C.pos,'center',800);txt(x,'−',l-14,y0+amp,20,C.elec,'center',800);txt(x,'0',l-12,y0,13,C.muted);txt(x,'vaqt',l+w-14,y0+14,13,C.muted);
+txt(x,'tok kuchi',l+6,y0-amp-18,13,C.muted,'left');
+const pts=[];for(let i=0;i<=140;i++){const tau=i/140*4;pts.push([l+tau/4*w,y0-v(T-4+tau)*amp]);}
+line(x,pts,C.accent,4);const cv=v(T);dot(x,l+w,y0-cv*amp,7,C.amber);
+/* yoʻnalish */
+x.fillStyle=C.surface;x.strokeStyle=C.line;x.lineWidth=2;x.beginPath();x.roundRect(110,14,200,44,10);x.fill();x.stroke();
+if(Math.abs(cv)>.12){const d=cv>0?1:-1;bigArrow(x,210-d*60,36,210+d*60,36,C.pos,4+Math.abs(cv)*3);}else dot(x,210,36,4,C.muted);
+txt(x,ac?'Tok yoʻnalishini almashtiryapti':'Tok bir yoʻnalishda',210,74,14,C.muted);
+txt(x,ac?'oʻzgaruvchan tok (AC): '+fmt(f,1)+' Hz':'oʻzgarmas tok (DC)',210,236,15,C.ink);
+}});
+function setMode(m){AC.mode=m;$('mAC').setAttribute('aria-pressed',m==='ac');$('mDC').setAttribute('aria-pressed',m==='dc');}
+$('mAC').onclick=()=>setMode('ac');$('mDC').onclick=()=>setMode('dc');
+$('sF').oninput=e=>{AC.f=+e.target.value;$('oF').textContent=fmt(AC.f,1)+' Hz';};$('oF').textContent=fmt(AC.f,1)+' Hz';
+
+/* ---- taʼsirlar ---- */
+function fxCard(id,tag,title,desc,extra){const d=document.createElement('div');d.className='card';
+d.innerHTML='<span class="tag">'+tag+'</span><h3>'+title+'</h3><canvas id="'+id+'"></canvas><label class="sw"><input type="checkbox" id="'+id+'on" checked><span class="trk"></span>Tokni ulash</label>'+(extra||'')+'<div class="ctl" data-anim="'+id+'"></div><p style="font-size:15px;color:var(--muted);margin:0">'+desc+'</p>';
+$('fxgrid').appendChild(d);}
+const on=id=>$(id+'on').checked;
+
+fxCard('heat','Issiqlik taʼsiri','Cho‘g‘lanma lampa, dazmol','Tok katta boʻlsa, spiral koʻproq qiziydi. Dazmol va choynakda ham shunday.','<div class="sl"><span>Tok kuchi</span><input type="range" id="heatI" min="1" max="10" value="5" aria-label="Tok kuchi"><output id="oheat">5</output></div>');
+new A('heat',300,210,{T:0,init(){this.T=0;},
+update(dt){const tg=on('heat')?$('heatI').value/10:0;this.T+=(tg-this.T)*Math.min(1,dt*1.8);$('oheat').textContent=$('heatI').value;},
+draw(x){const T=this.T,cx=150,cy=95;
+if(T>.03){const g=x.createRadialGradient(cx,cy,8,cx,cy,95);g.addColorStop(0,'hsla('+(50-T*20)+',100%,60%,'+(T*.7)+')');g.addColorStop(1,'hsla(40,100%,60%,0)');x.fillStyle=g;x.fillRect(0,0,300,210);}
+x.strokeStyle=C.wire;x.lineWidth=3;x.beginPath();x.arc(cx,cy,56,0,7);x.stroke();
+x.fillStyle=C.wire;x.fillRect(cx-20,cy+54,40,22);
+line(x,[[cx-12,cy+54],[cx-12,cy+10]],C.wire,3);line(x,[[cx+12,cy+54],[cx+12,cy+10]],C.wire,3);
+const pts=[[cx-12,cy+10]];for(let i=0;i<7;i++)pts.push([cx-12+(i+.5)*24/7,cy+(i%2?10:-8)]);pts.push([cx+12,cy+10]);
+line(x,pts,T>.04?'hsl('+(50*T+8)+',100%,'+(35+40*T)+'%)':C.wire,4+T*2);
+for(let k=0;k<3;k++){const p=[];for(let j=0;j<=16;j++){const yy=cy-62-j*3,xx=cx-28+k*28+Math.sin(j*.7+this.t*3+k)*4;p.push([xx,yy]);}
+x.globalAlpha=T*.8;line(x,p,C.pos,2);x.globalAlpha=1;}
+txt(x,T<.25?'Qizish: past':T<.65?'Qizish: oʻrtacha':'Qizish: yuqori',150,194,16,C.ink);}});
+
+fxCard('mag','Magnit taʼsiri','Kompas va elektromagnit','Tok atrofida magnit maydon paydo boʻladi. Tok yoʻnalishini almashtirsangiz, strelka teskari tomonga ogʻadi.','<div class="seg"><button class="btn s" id="magM" aria-pressed="false">Elektromagnit</button><button class="btn s" id="magD">Yoʻnalishni almashtirish</button></div>');
+const MG={em:false,dir:1};
+$('magM').onclick=e=>{MG.em=!MG.em;e.target.setAttribute('aria-pressed',MG.em);e.target.textContent=MG.em?'Kompas':'Elektromagnit';};$('magD').onclick=()=>MG.dir=-MG.dir;
+new A('mag',300,210,{a:0,c:0,init(){this.a=0;this.c=0;},
+update(dt){const o=on('mag');const tg=o?MG.dir*1.05:0;this.a+=(tg-this.a)*Math.min(1,dt*5);this.c+=((o?1:0)-this.c)*Math.min(1,dt*3);},
+draw(x){
+if(!MG.em){const o=on('mag');line(x,[[30,50],[270,50]],C.wire,5);
+if(o)bigArrow(x,150-MG.dir*40,50,150+MG.dir*40,50,C.pos,4);txt(x,'sim',30,34,13,C.muted,'left');
+const cx=150,cy=130;dot(x,cx,cy,56,C.surface);x.beginPath();x.arc(cx,cy,56,0,7);x.strokeStyle=C.wire;x.lineWidth=3;x.stroke();
+txt(x,'Sh',cx,cy-44,13,C.muted);txt(x,'J',cx,cy+44,13,C.muted);
+x.save();x.translate(cx,cy);x.rotate(this.a+Math.sin(this.t*14)*.02*Math.abs(this.a));
+x.beginPath();x.moveTo(0,-44);x.lineTo(7,0);x.lineTo(-7,0);x.closePath();x.fillStyle=C.pos;x.fill();
+x.beginPath();x.moveTo(0,44);x.lineTo(7,0);x.lineTo(-7,0);x.closePath();x.fillStyle=C.elec;x.fill();x.restore();
+txt(x,o?'Strelka ogʻdi: tok atrofida magnit maydon':'Tok yoʻq: strelka shimolga qaraydi',150,200,14,C.ink);
+}else{const o=on('mag'),k=this.c;
+x.fillStyle=C.muted;x.fillRect(142,40,16,92);x.beginPath();x.moveTo(142,132);x.lineTo(158,132);x.lineTo(150,142);x.fill();
+for(let i=0;i<7;i++)line(x,[[134,52+i*10],[166,46+i*10]],C.amber,3);
+line(x,[[134,52],[100,52],[100,20],[180,20]],C.wire,3);line(x,[[166,112],[200,112],[200,20],[180,20]],C.wire,3);
+txt(x,'+ − manba',150,12,13,C.muted);
+for(let i=0;i<3;i++){const sx=[100,150,205][i]-0,sy=190;const tx=150+(i-1)*3,ty=152+i*9;const px=sx+(tx-sx)*k,py=sy+(ty-sy)*k-Math.sin(k*3.14)*18;x.fillStyle=C.wire;x.fillRect(px-9,py-4,18,8);}
+line(x,[[40,198],[260,198]],C.line,2);
+txt(x,o?'Tok bor: mix magnit boʻldi, skrepkalarni tortdi':'Tok yoʻq: magnitlik yoʻqoldi',150,186-2,13,C.ink);
+}}});
+
+fxCard('chem','Kimyoviy taʼsir','Elektroliz (mis qoplash)','Mis sulfat eritmasida mis ionlari manfiy elektrod (katod) tomon yuradi va unga mis boʻlib yopishadi.');
+new A('chem',300,210,{th:0,ions:[],init(){this.th=0;this.ions=[];for(let i=0;i<10;i++)this.ions.push({x:120+Math.random()*100,y:80+Math.random()*80});},
+update(dt){if(!on('chem'))return;for(const p of this.ions){p.x-=28*dt;p.y+=Math.sin(this.t*3+p.x)*8*dt;if(p.x<=118){this.th=Math.min(11,this.th+.35);p.x=212+Math.random()*10;p.y=80+Math.random()*80;}}},
+draw(x){x.fillStyle=C.elec+'33';x.fillRect(60,70,180,105);x.strokeStyle=C.wire;x.lineWidth=3;line(x,[[60,60],[60,175],[240,175],[240,60]],C.wire,3);
+x.fillStyle='#c97a3c';x.fillRect(106-this.th/2,72,6+this.th,86);x.fillStyle=C.muted;x.fillRect(108,40,6,118);x.fillRect(196,40,6,118);
+line(x,[[111,40],[111,22],[135,22]],C.wire,2.5);line(x,[[199,40],[199,22],[175,22]],C.wire,2.5);
+x.fillStyle=C.surface;x.strokeStyle=C.wire;x.lineWidth=2;x.fillRect(135,12,40,20);x.strokeRect(135,12,40,20);txt(x,'manba',155,22,12,C.ink);
+txt(x,'−',92,50,22,C.elec,'center',800);txt(x,'+',218,50,22,C.pos,'center',800);
+for(const p of this.ions)dot(x,p.x,p.y,5,'#e08a3c');
+txt(x,'katod',78,190,13,C.muted);txt(x,'anod',222,190,13,C.muted);
+txt(x,on('chem')?'Katodda mis qatlami qalinlashyapti':'Tok yoʻq: qoplama oʻsmayapti',150,203,13,C.ink);}});
+
+fxCard('led','Yorugʻlik taʼsiri','LED (yorugʻlik diodi)','LED tokni faqat bir yoʻnalishda oʻtkazadi. Qutblari toʻgʻri ulanganda yonadi.','<div class="seg"><button class="btn s" id="ledP">Qutblarni almashtirish</button></div>');
+const LD={flip:false};$('ledP').onclick=()=>LD.flip=!LD.flip;
+new A('led',300,210,{ph:0,init(){this.ph=0;},
+update(dt){if(on('led')&&!LD.flip)this.ph+=60*dt;},
+draw(x){const X0=50,Y0=50,X1=250,Y1=150,lit=on('led')&&!LD.flip;
+x.strokeStyle=C.wire;x.lineWidth=4;x.strokeRect(X0,Y0,X1-X0,Y1-Y0);
+clear(x,X0-18,80,36,40);const lp=LD.flip?118:84,sp=LD.flip?84:118;
+line(x,[[X0-16,lp],[X0+16,lp]],LD.flip?C.pos:C.pos,5);line(x,[[X0-9,sp],[X0+9,sp]],C.elec,5);
+txt(x,'+',X0-30,lp,18,C.pos,'center',800);txt(x,'−',X0-30,sp,20,C.elec,'center',800);
+line(x,[[X0,Y0+30],[X0,Math.min(lp,sp)]],C.wire,4);line(x,[[X0,Math.max(lp,sp)],[X0,Y1-30]],C.wire,4);
+clear(x,X1-16,70,32,60);
+if(lit){const g=x.createRadialGradient(X1,100,4,X1,100,70);g.addColorStop(0,C.ok+'cc');g.addColorStop(1,C.ok+'00');x.fillStyle=g;x.fillRect(X1-70,30,140,140);}
+x.beginPath();x.moveTo(X1-16,80);x.lineTo(X1+16,80);x.lineTo(X1,106);x.closePath();x.fillStyle=lit?C.ok:C.surface;x.fill();x.strokeStyle=C.wire;x.lineWidth=3;x.stroke();line(x,[[X1-16,110],[X1+16,110]],C.wire,4);
+if(lit)for(let i=0;i<6;i++){const p=loopPos(i*60+this.ph,X0,Y0,X1,Y1);arrow(x,p[0],p[1],p[2],7,C.pos);}
+txt(x,'LED',X1+30,95,13,C.muted,'left');
+txt(x,!on('led')?'Tok yoʻq: LED oʻchiq':LD.flip?'Qutblar teskari: LED yonmaydi':'Qutblar toʻgʻri: LED yonyapti',150,185,14,C.ink);}});
+
+fxCard('motor','Mexanik taʼsir','Elektr dvigatel','Tok va magnit maydon birgalikda rotorni aylantiradi. Kuchlanish katta boʻlsa, u tezroq aylanadi.','<div class="sl"><span>Kuchlanish</span><input type="range" id="motV" min="1" max="12" value="6" aria-label="Kuchlanish"><output id="omot">6 V</output></div>');
+new A('motor',300,210,{w:0,ang:0,init(){this.w=0;},
+update(dt){const tg=on('motor')?$('motV').value*1.1:0;this.w+=(tg-this.w)*Math.min(1,dt*2);this.ang+=this.w*dt;$('omot').textContent=$('motV').value+' V';},
+draw(x){const cx=100,cy=100;
+x.fillStyle=C.elec;x.fillRect(cx-70,cy-30,20,60);x.fillStyle=C.pos;x.fillRect(cx+50,cy-30,20,60);txt(x,'N',cx-60,cy,14,'#fff','center',800);txt(x,'S',cx+60,cy,14,'#fff','center',800);
+dot(x,cx,cy,42,C.surface);x.beginPath();x.arc(cx,cy,42,0,7);x.strokeStyle=C.wire;x.lineWidth=3;x.stroke();
+x.save();x.translate(cx,cy);x.rotate(this.ang);x.strokeStyle=C.amber;x.lineWidth=5;x.strokeRect(-28,-12,56,24);x.restore();dot(x,cx,cy,5,C.wire);
+line(x,[[cx+42,cy],[215,cy]],C.wire,5);
+x.save();x.translate(225,cy);x.rotate(this.ang);for(let i=0;i<3;i++){x.rotate(2.0944);x.beginPath();x.ellipse(0,-22,9,22,0,0,7);x.fillStyle=C.accent;x.fill();}x.restore();dot(x,225,cy,6,C.wire);
+txt(x,on('motor')?'Rotor aylanyapti':'Tok yoʻq: rotor turibdi',150,194,14,C.ink);}});
+
+/* ---- testlar ---- */
+const Q=[
+[{q:'Metallarda tokni hosil qiladigan zarralar qaysilar?',o:['Erkin elektronlar','Neytronlar','Musbat ionlar','Atom yadrolari'],a:0,w:'Metallarda erkin elektronlar boʻladi. Ular maydon taʼsirida yoʻnalgan harakatlanadi.'},
+{q:'Quyidagilardan qaysi biri tok hosil boʻlishi uchun shart emas?',o:['Erkin zaryadli zarralar','Elektr maydon','Berk zanjir','Zanjirda lampochka boʻlishi'],a:3,w:'Lampochka iste’molchi, xolos. Tok uchun zarralar, maydon va berk zanjir kerak.'},
+{q:'Tokning shartli yoʻnalishi qanday?',o:['Manfiy qutbdan musbat qutbga','Musbat qutbdan manfiy qutbga','Faqat lampochka tomonga','Yoʻnalishi yoʻq'],a:1,w:'Shartli yoʻnalish + dan − ga. Elektronlar esa teskari yuradi.'},
+{q:'Kalit uzilganda lampochka nega oʻchadi?',o:['Elektronlar yoʻqoladi','Batareya portlaydi','Zanjir berk emas, tok yoʻq','Lampochka muzlaydi'],a:2,w:'Zanjir uzilsa, elektronlar aylanib chiqa olmaydi va tok toʻxtaydi.'}],
+[{q:'Tok kuchi qanday birlikda oʻlchanadi?',o:['Volt (V)','Amper (A)','Om (Ω)','Kulon (C)'],a:1,w:'Tok kuchi amperda, kuchlanish voltda, qarshilik omda oʻlchanadi.'},
+{q:'Voltmetr zanjirga qanday ulanadi?',o:['Iste’molchiga parallel','Ketma-ket','Batareya ichiga','Ulanmaydi'],a:0,w:'Voltmetr kuchlanishni oʻlchaydi va iste’molchiga parallel ulanadi. Ampermetr ketma-ket ulanadi.'},
+{q:'U = 12 V, R = 4 Ω boʻlsa, tok kuchi nechaga teng?',o:['48 A','8 A','3 A','0,33 A'],a:2,w:'I = U / R = 12 / 4 = 3 A.'},
+{q:'U oʻzgarmasa, R ikki marta oshsa, tok kuchi nima boʻladi?',o:['2 marta oshadi','2 marta kamayadi','Oʻzgarmaydi','4 marta oshadi'],a:1,w:'I = U / R. Maxraj oshsa, kasr kamayadi: tok 2 marta kamayadi.'},
+{q:'Ampermetr zanjirga qanday ulanadi?',o:['Parallel','Ketma-ket','Faqat batareyaga','Hech qanday'],a:1,w:'Tok ampermetr orqali oʻtishi kerak, shuning uchun u ketma-ket ulanadi.'}],
+[{q:'Qaysi manba oʻzgarmas tok beradi?',o:['Rozetka','Batareya','Elektr stansiya simlari','Hech qaysi'],a:1,w:'Batareya tokni bir yoʻnalishda beradi. Rozetkada tok oʻzgaruvchan.'},
+{q:'Oʻzbekistonda rozetkadagi tokning chastotasi qancha?',o:['5 Hz','20 Hz','50 Hz','220 Hz'],a:2,w:'Tarmoq kuchlanishi 220 V, chastotasi 50 Hz.'},
+{q:'Dazmol tokning qaysi taʼsiriga asoslangan?',o:['Kimyoviy','Issiqlik','Magnit','Yorugʻlik'],a:1,w:'Tok oʻtganda spiral qiziydi. Bu issiqlik taʼsiri.'},
+{q:'Kompas strelkasi tok oʻtayotgan sim yonida ogʻdi. Bu nimani bildiradi?',o:['Tok atrofida magnit maydon bor','Sim muzlagan','Strelka buzilgan','Tok issiqlik beryapti'],a:0,w:'Bu Oersted tajribasi: tok atrofida magnit maydon paydo boʻladi.'},
+{q:'Quyidagilardan qaysi biri xavfsizlik qoidasiga toʻgʻri keladi?',o:['Ho‘l qo‘l bilan rozetkaga tegish','Rozetkaga mix tiqish','Vilkani simidan tortib chiqarish','Shikastlangan simni kattalarga koʻrsatish'],a:3,w:'Shikastlangan sim xavfli. Uni ishlatmang va kattalarga ayting.'}]];
+document.querySelectorAll('[data-quiz]').forEach(el=>quiz(el,Q[+el.dataset.quiz]));
+
+/* ---- boshqaruv tugmalari ---- */
+document.querySelectorAll('.ctl[data-anim]').forEach(el=>{const ids=el.dataset.anim.split(' ');
+[['Boshlash','p',a=>{a.running=true;}],['Toʻxtatish','',a=>{a.running=false;}],['Qayta boshlash','',a=>{a.reset();a.running=true;}]].forEach(([t,c,f])=>{
+const b=document.createElement('button');b.className='btn s '+c;b.textContent=t;b.onclick=()=>ids.forEach(i=>f(anims[i]));el.appendChild(b);});});
+})();
+
+</script>
+</body>
+</html>
